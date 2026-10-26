@@ -12,12 +12,12 @@ async function sha256Hex(text) {
 async function load() {
   const res = token && (await fetch('/api/public/' + encodeURIComponent(token)));
   if (!res || !res.ok) { main.innerHTML = '<p class="notice">この発注書は見つからないか、無効になっています。</p>'; return; }
-  const { snapshot, hash, agreement } = await res.json();
+  const { snapshot, hash, agreement, issuedAt } = await res.json();
   let verified = false;
   try { verified = (await sha256Hex(stableStringify(snapshot))) === hash; } catch { /* 非セキュア環境では検証を省略 */ }
 
   main.innerHTML = `
-    <div class="paper">${renderDocument(snapshot, agreement && { ...agreement, hash })}</div>
+    <div class="paper">${renderDocument(snapshot, agreement && { ...agreement, hash }, issuedAt)}</div>
     <section class="agree-box no-print">
       ${verified ? '<p class="muted small">文書の改ざんチェック:一致しました</p>' : ''}
       ${agreement ? `<p class="notice ok">${esc(agreement.name)} 様の同意を記録済みです。</p>

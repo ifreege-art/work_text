@@ -35,9 +35,10 @@ export function buildSnapshot(order, master) {
   };
 }
 
+const jpDate = (iso) => new Date(iso).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', day: 'numeric' });
 const row = (k, v) => (v ? `<tr><th>${esc(k)}</th><td>${nl(v)}</td></tr>` : '');
 
-export function renderDocument(s, agreement) {
+export function renderDocument(s, agreement, issuedAt) {
   const c = s.client, a = s.artist, sp = s.spec, t = s.totals;
   const party = (label, name, lines) => `
     <div class="party"><div class="party-label">${label}</div>
@@ -101,19 +102,13 @@ export function renderDocument(s, agreement) {
     </ol>
 
     <h2>同意</h2>
-    ${agreement ? `
-    <div class="agreed">
-      <p>制作者は、上記の発注内容および規約に同意しました。</p>
-      <table class="kv">
-        <tr><th>同意者(氏名)</th><td>${esc(agreement.name)}</td></tr>
-        <tr><th>同意日時</th><td>${esc(new Date(agreement.at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }))}</td></tr>
-        <tr><th>文書ハッシュ(SHA-256)</th><td class="hash">${esc(agreement.hash)}</td></tr>
-      </table>
-    </div>` : `
-    <p class="small">上記の内容および規約に同意します。(同意方法:□署名 □メール □DM □専用ページ)</p>
+    <p class="small">上記の内容および規約に同意します。(同意方法:${agreement ? '☑専用ページ □署名 □メール □DM' : '□署名 □メール □DM □専用ページ'})</p>
     <div class="sign">
-      <div><div class="sign-label">制作者 署名</div><div class="sign-line"></div><div class="sign-label">日付</div><div class="sign-line"></div></div>
-      <div><div class="sign-label">発注者 署名</div><div class="sign-line"></div><div class="sign-label">日付</div><div class="sign-line"></div></div>
-    </div>`}
+      <div><div class="sign-label">制作者 署名</div><div class="sign-line">${agreement ? esc(agreement.name) : ''}</div>
+        <div class="sign-label">日付</div><div class="sign-line">${agreement ? esc(jpDate(agreement.at)) : ''}</div></div>
+      <div><div class="sign-label">発注者 署名</div><div class="sign-line">${esc(c.name)}</div>
+        <div class="sign-label">日付</div><div class="sign-line">${issuedAt ? esc(jpDate(issuedAt)) : ''}</div></div>
+    </div>
+    ${agreement ? `<p class="small hash">電子同意記録:${esc(new Date(agreement.at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }))} / 文書ハッシュ(SHA-256) ${esc(agreement.hash)}</p>` : ''}
   </article>`;
 }

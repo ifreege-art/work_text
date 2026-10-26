@@ -129,7 +129,7 @@ const nextNumber = () => {
   return `${master.profile.numberPrefix || 'ORD'}-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}-${String(master.counter + 1).padStart(3, '0')}`;
 };
 const previewHtml = () => {
-  if (order.issued) return renderDocument(order.issued.snapshot, order.agreement);
+  if (order.issued) return renderDocument(order.issued.snapshot, order.agreement, order.issued.at);
   return renderDocument(buildSnapshot(order, master));
 };
 
