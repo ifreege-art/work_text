@@ -2,7 +2,7 @@ import { calc, yen } from './js/core.js';
 import { buildSnapshot, renderDocument, printAs, esc } from './js/render.js';
 import {
   DEFAULT_MASTER, DEFAULT_ORDER, DEFAULT_TERMS, COPYRIGHT_OPTIONS, CREDIT_OPTIONS,
-  PORTFOLIO_OPTIONS, AI_OPTIONS, PURPOSE_SUGGESTIONS,
+  PORTFOLIO_OPTIONS, AI_OPTIONS, PURPOSE_SUGGESTIONS, PAYMENT_TIMINGS,
 } from './js/defaults.js';
 
 const bar = document.getElementById('bar');
@@ -153,7 +153,8 @@ function orderForm() {
   </div>
   <div class="card"><h3>取り決め事項</h3>
     ${S(o, '著作権・利用許諾', 'spec.copyright', COPYRIGHT_OPTIONS)}
-    <div class="grid3">${S(o, 'クレジット表記', 'spec.credit', CREDIT_OPTIONS)}${S(o, '実績掲載', 'spec.portfolio', PORTFOLIO_OPTIONS)}${S(o, '生成AI', 'spec.aiPolicy', AI_OPTIONS)}</div>
+    <div class="grid2">${S(o, 'クレジット表記', 'spec.credit', CREDIT_OPTIONS)}${S(o, '実績掲載', 'spec.portfolio', PORTFOLIO_OPTIONS)}</div>
+    ${S(o, '生成AIの取扱い', 'spec.aiPolicy', AI_OPTIONS)}
   </div>
   <div class="card"><h3>報酬</h3>
     ${o.items.map((it, i) => `<div class="item-row">
@@ -170,7 +171,8 @@ function orderForm() {
     ${C(o, '源泉徴収を差し引いて支払われる', 'withholding.enabled')}
     ${w.enabled ? `<div class="grid2">${S(o, '税率', 'withholding.mode', [['auto', '10.21%(100万円超は超過分20.42%)'], ['custom', '任意の税率']])}
       ${w.mode === 'custom' ? F(o, '税率(%)', 'withholding.rate', { type: 'number', num: true }) : ''}</div>` : ''}
-    <div class="grid2" style="margin-top:8px">${F(o, '支払い方法', 'payment.method', { rows: 2, ph: '振込先・PayPay・PayPalなど' })}${F(o, '支払い期日', 'payment.due')}</div>
+    <div style="margin-top:8px">${S(o, '支払い時期', 'payment.timing', PAYMENT_TIMINGS)}</div>
+    <div class="grid2">${F(o, '支払い方法', 'payment.method', { rows: 2, ph: '振込先・PayPay・PayPalなど' })}${F(o, '支払い期日', 'payment.due', { ph: '例:ラフ承認後3日以内' })}</div>
     <p id="totalLine" class="small muted"></p>
   </div>
   <div class="card"><h3>規約・特約</h3>
@@ -194,7 +196,9 @@ function viewOrder(id) {
   }
   const found = orders.find((x) => x.id === id);
   if (!found) { location.hash = '#/'; return; }
-  open(structuredClone(found), false);
+  const o = structuredClone(found);
+  if (!o.issued) o.payment.timing ??= PAYMENT_TIMINGS[1];
+  open(o, false);
 }
 
 function drawOrder() {

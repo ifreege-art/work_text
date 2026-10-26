@@ -76,7 +76,7 @@ export function renderDocument(s, agreement, issuedAt) {
     <h2>取り決め事項</h2>
     <table class="kv">
       ${row('著作権・利用許諾', sp.copyright)}${row('クレジット表記', sp.credit)}
-      ${row('制作者による実績掲載', sp.portfolio)}${row('生成AIの使用', sp.aiPolicy)}
+      ${row('制作者による実績掲載', sp.portfolio)}${row('生成AIの取扱い', sp.aiPolicy)}
     </table>
 
     <h2>報酬</h2>
@@ -92,7 +92,7 @@ export function renderDocument(s, agreement, issuedAt) {
       <tr class="strong"><th>お支払い金額</th><td>${yen(t.payable)}</td></tr>` : ''}
     </table>
     <table class="kv">
-      ${row('支払い方法', s.payment.method)}${row('支払い期日', s.payment.due)}
+      ${row('支払い時期', s.payment.timing)}${row('支払い期日', s.payment.due)}${row('支払い方法', s.payment.method)}
     </table>
     ${s.notes ? `<h2>備考</h2><p class="free">${nl(s.notes)}</p>` : ''}
     ${s.special ? `<h2>特約事項</h2><p class="free">${nl(s.special)}</p>` : ''}
