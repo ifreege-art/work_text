@@ -1,5 +1,5 @@
 import { calc, yen } from './js/core.js';
-import { buildSnapshot, renderDocument, esc } from './js/render.js';
+import { buildSnapshot, renderDocument, printAs, esc } from './js/render.js';
 import {
   DEFAULT_MASTER, DEFAULT_ORDER, DEFAULT_TERMS, COPYRIGHT_OPTIONS, CREDIT_OPTIONS,
   PORTFOLIO_OPTIONS, AI_OPTIONS, PURPOSE_SUGGESTIONS,
@@ -106,7 +106,7 @@ function viewList() {
   const ro = readonly();
   main.innerHTML = `<div class="row" style="justify-content:space-between"><h2 class="page">発注書</h2>
     ${ro ? '' : '<a class="btn primary" href="#/order/new">新規作成</a>'}</div>
-    ${orders.length ? `<table class="list"><thead><tr><th>番号</th><th>件名</th><th>制作者</th><th class="hide-sm">発注日</th><th>税込合計</th><th>状態</th><th>支払い</th></tr></thead><tbody>
+    ${orders.length ? `<table class="list"><thead><tr><th>番号</th><th>件名</th><th>発注者</th><th class="hide-sm">発注日</th><th>税込合計</th><th>状態</th><th>支払い</th></tr></thead><tbody>
     ${orders.map((o) => {
       const a = master.artists.find((x) => x.id === o.artistId);
       return `<tr class="click" data-id="${o.id}"><td>${esc(o.number)}</td><td>${esc(o.title) || '(無題)'}</td><td>${esc(a?.name || '')}</td>
@@ -139,7 +139,7 @@ function orderForm() {
   return `
   <div class="card"><h3>基本</h3>
     ${F(o, '件名', 'title', { ph: '例:キャラクターイラスト制作' })}
-    <label>制作者(相手)<select data-bind="artistId"><option value="">選択してください</option>
+    <label>発注者(依頼者)<select data-bind="artistId"><option value="">選択してください</option>
       ${master.artists.map((a) => `<option value="${a.id}" ${a.id === o.artistId ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
     <div class="grid3">${F(o, '発注日', 'orderDate', { type: 'date' })}${F(o, 'ラフ提出期限', 'roughDue', { type: 'date' })}${F(o, '納期', 'deadline', { type: 'date' })}</div>
   </div>
@@ -167,7 +167,7 @@ function orderForm() {
       ${F(o, '消費税率(%)', 'tax.rate', { type: 'number', num: true })}
       ${S(o, '端数処理', 'tax.rounding', [['floor', '切り捨て'], ['round', '四捨五入'], ['ceil', '切り上げ']])}
     </div>
-    ${C(o, '源泉徴収を行う', 'withholding.enabled')}
+    ${C(o, '源泉徴収を差し引いて支払われる', 'withholding.enabled')}
     ${w.enabled ? `<div class="grid2">${S(o, '税率', 'withholding.mode', [['auto', '10.21%(100万円超は超過分20.42%)'], ['custom', '任意の税率']])}
       ${w.mode === 'custom' ? F(o, '税率(%)', 'withholding.rate', { type: 'number', num: true }) : ''}</div>` : ''}
     <div class="grid2" style="margin-top:8px">${F(o, '支払い方法', 'payment.method', { rows: 2, ph: '振込先・PayPay・PayPalなど' })}${F(o, '支払い期日', 'payment.due')}</div>
@@ -207,14 +207,14 @@ function drawOrder() {
     <span class="sp" style="flex:1"></span>
     ${ro ? '' : `
       ${locked ? '' : '<button id="save" class="primary">保存</button><button id="issue">発行(確定)</button>'}
-      <button id="print">印刷・PDF</button>
+      <button id="print">PDF保存・印刷</button>
       ${isNew ? '' : '<button id="dup">複製</button><button id="del" class="danger">削除</button>'}`}
-    ${ro ? '<button id="print">印刷・PDF</button>' : ''}
+    ${ro ? '<button id="print">PDF保存・印刷</button>' : ''}
   </div>
   ${locked ? `<div class="card no-print">
     <h3>同意用URL</h3>
     <div class="urlbox"><input id="shareUrl" readonly value="${esc(url)}"><button id="copy">コピー</button></div>
-    <p class="small muted">${order.agreement ? `${esc(order.agreement.name)} さんが ${esc(new Date(order.agreement.at).toLocaleString('ja-JP'))} に同意しました。` : 'このURLを制作者に送ってください。同意が行われるとここに記録されます。'}</p>
+    <p class="small muted">${order.agreement ? `${esc(order.agreement.name)} さんが ${esc(new Date(order.agreement.at).toLocaleString('ja-JP'))} に同意しました。` : 'このURLを発注者に送ってください。同意が行われるとここに記録されます。'}</p>
     ${ro ? '' : `<div class="row"><label class="check"><input type="checkbox" id="paidChk" ${order.paid ? 'checked' : ''}> 支払い済み</label>
       <button id="unlock" class="danger">発行を取り消して編集に戻す</button></div>`}
   </div>` : ''}
@@ -225,7 +225,7 @@ function drawOrder() {
   const doc = document.getElementById('doc');
   const refresh = () => { doc.innerHTML = previewHtml(); updateTotalLine(); };
   refresh();
-  document.getElementById('print')?.addEventListener('click', () => print());
+  document.getElementById('print')?.addEventListener('click', () => printAs(`発注書_${order.number}_${order.title}`));
   if (ro) return;
 
   const form = main.querySelector('.form');
@@ -248,8 +248,16 @@ function drawOrder() {
   };
   document.getElementById('save')?.addEventListener('click', () => run(async () => { await save(); toast('保存しました'); drawOrder(); }));
   document.getElementById('issue')?.addEventListener('click', () => run(async () => {
-    if (!order.title.trim() || !order.artistId || !master.profile.name.trim()) { toast('件名・制作者の選択・マスタの自分の名前を入力してください'); return; }
-    if (!confirm('発行すると内容が固定されます(編集するには発行を取り消す必要があります)。発行しますか?')) return;
+    if (!order.title.trim() || !order.artistId || !master.profile.name.trim()) { toast('件名・発注者の選択・マスタの自分の名前を入力してください'); return; }
+    const client = master.artists.find((a) => a.id === order.artistId);
+    const warns = [
+      !order.spec.purpose.trim() && '用途が未入力です(用途外の使用を制限する根拠になります)',
+      !order.deadline && '納期が未設定です',
+      !(calc(order).gross > 0) && '報酬が0円です',
+      !client?.contact.trim() && '発注者の連絡先が未入力です',
+      !(master.profile.email.trim() || master.profile.sns.trim()) && '自分の連絡先(メール・SNS)が未入力です',
+    ].filter(Boolean);
+    if (warns.length && !confirm('次の点を確認してください。\n・' + warns.join('\n・') + '\n\nこのまま発行しますか?')) return;
     await save();
     const { order: o } = await api(`/orders/${order.id}/issue`, 'POST', { snapshot: buildSnapshot(order, master) });
     Object.assign(orders.find((x) => x.id === o.id), o); order = structuredClone(o);
@@ -282,14 +290,14 @@ function drawOrder() {
 }
 
 // ---------- マスタ ----------
-const TABS = [['profile', '自分'], ['artists', '相手'], ['terms', '規約'], ['defaults', '既定値・バックアップ']];
+const TABS = [['profile', '自分(制作者)'], ['artists', '依頼者'], ['terms', '規約'], ['defaults', '既定値・バックアップ']];
 
 function viewMaster(tab) {
   tab = TABS.some((t) => t[0] === tab) ? tab : 'profile';
   const ro = readonly();
   const p = master.profile;
   const body = {
-    profile: () => `<div class="card"><h3>自分の情報</h3>
+    profile: () => `<div class="card"><h3>制作者(自分)の情報</h3>
       ${F(master, '名前・屋号', 'profile.name')}
       <div class="grid2">${F(master, 'メールアドレス', 'profile.email')}${F(master, 'SNS・連絡先', 'profile.sns', { ph: '例:X @example' })}</div>
       <div class="grid2">${F(master, '電話番号', 'profile.phone')}${F(master, '住所', 'profile.address')}</div>
@@ -300,7 +308,7 @@ function viewMaster(tab) {
       <button class="danger" data-rm-artist="${i}">削除</button></div>
       <div class="grid2">${F(master, '名前', `artists.${i}.name`)}${F(master, '敬称', `artists.${i}.honorific`)}</div>
       ${F(master, '連絡先(SNS・メール)', `artists.${i}.contact`)}${F(master, 'メモ(書類には出ません)', `artists.${i}.note`, { rows: 2 })}</div>`).join('') || '<p class="muted">まだ登録がありません。</p>'}
-      <button id="addArtist">＋ 相手を追加</button>`,
+      <button id="addArtist">＋ 依頼者を追加</button>`,
     terms: () => `${master.terms.map((t, i) => `<div class="term"><div class="row">
       <label class="check" style="margin:0"><input type="checkbox" data-bind="terms.${i}.enabled" ${t.enabled ? 'checked' : ''}> 有効</label>
       <input data-bind="terms.${i}.title" value="${esc(t.title)}" style="flex:1;min-width:160px">

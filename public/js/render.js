@@ -8,22 +8,22 @@ const fmtDate = (d) => (d ? d.replace(/^(\d{4})-(\d{2})-(\d{2})$/, (_, y, m, dd)
 export function buildSnapshot(order, master) {
   const p = master.profile;
   const hide = new Set(p.hide || []);
-  const artist = master.artists.find((a) => a.id === order.artistId) || { name: '', contact: '', honorific: '様' };
+  const client = master.artists.find((a) => a.id === order.artistId) || { name: '', contact: '', honorific: '様' };
   const t = calc(order);
   const terms = master.terms.filter((x) => x.enabled && !(order.termsOff || []).includes(x.id)).map((x) => ({ title: x.title, body: x.body }));
   return {
-    v: 1,
+    v: 2,
     number: order.number || '',
     title: order.title,
     orderDate: order.orderDate, roughDue: order.roughDue, deadline: order.deadline,
-    client: {
+    creator: {
       name: p.name,
       email: hide.has('email') ? '' : p.email,
       sns: hide.has('sns') ? '' : p.sns,
       address: hide.has('address') ? '' : p.address,
       phone: hide.has('phone') ? '' : p.phone,
     },
-    artist: { name: artist.name, contact: artist.contact, honorific: artist.honorific ?? '様' },
+    client: { name: client.name, contact: client.contact, honorific: client.honorific ?? '様' },
     spec: order.spec, description: order.description, references: order.references,
     totals: t,
     tax: { mode: order.tax.mode, rate: Number(order.tax.rate) || 0 },
@@ -39,7 +39,8 @@ const jpDate = (iso) => new Date(iso).toLocaleDateString('ja-JP', { timeZone: 'A
 const row = (k, v) => (v ? `<tr><th>${esc(k)}</th><td>${nl(v)}</td></tr>` : '');
 
 export function renderDocument(s, agreement, issuedAt) {
-  const c = s.client, a = s.artist, sp = s.spec, t = s.totals;
+  if (s.v !== 2) return '<p class="notice">旧形式の書類のため表示できません。</p>';
+  const cr = s.creator, cl = s.client, sp = s.spec, t = s.totals;
   const party = (label, name, lines) => `
     <div class="party"><div class="party-label">${label}</div>
       <div class="party-name">${esc(name) || '&nbsp;'}</div>
@@ -58,10 +59,10 @@ export function renderDocument(s, agreement, issuedAt) {
       </div>
     </header>
     <div class="parties">
-      ${party('制作者', a.name + (a.name ? ' ' + a.honorific : ''), [a.contact])}
-      ${party('発注者', c.name, [c.email, c.sns, c.phone, c.address])}
+      ${party('発注者', cl.name + (cl.name ? ' ' + cl.honorific : ''), [cl.contact])}
+      ${party('制作者', cr.name, [cr.email, cr.sns, cr.phone, cr.address])}
     </div>
-    <p class="lead">下記の内容で、イラストの制作を発注いたします。</p>
+    <p class="lead">下記の内容で、発注者は制作者にイラストの制作を依頼し、制作者はこれを受注します。</p>
 
     <h2>依頼内容</h2>
     <table class="kv">
@@ -104,11 +105,19 @@ export function renderDocument(s, agreement, issuedAt) {
     <h2>同意</h2>
     <p class="small">上記の内容および規約に同意します。(同意方法:${agreement ? '☑専用ページ □署名 □メール □DM' : '□署名 □メール □DM □専用ページ'})</p>
     <div class="sign">
-      <div><div class="sign-label">制作者 署名</div><div class="sign-line">${agreement ? esc(agreement.name) : ''}</div>
+      <div><div class="sign-label">発注者 署名</div><div class="sign-line">${agreement ? esc(agreement.name) : ''}</div>
         <div class="sign-label">日付</div><div class="sign-line">${agreement ? esc(jpDate(agreement.at)) : ''}</div></div>
-      <div><div class="sign-label">発注者 署名</div><div class="sign-line">${esc(c.name)}</div>
+      <div><div class="sign-label">制作者 署名</div><div class="sign-line">${esc(cr.name)}</div>
         <div class="sign-label">日付</div><div class="sign-line">${issuedAt ? esc(jpDate(issuedAt)) : ''}</div></div>
     </div>
     ${agreement ? `<p class="small hash">電子同意記録:${esc(new Date(agreement.at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }))} / 文書ハッシュ(SHA-256) ${esc(agreement.hash)}</p>` : ''}
   </article>`;
+}
+
+// 印刷ダイアログの「PDFとして保存」で、ファイル名が書類名になるようにする
+export function printAs(name) {
+  const prev = document.title;
+  document.title = name.replace(/[\\/:*?"<>|]/g, '_');
+  window.addEventListener('afterprint', () => { document.title = prev; }, { once: true });
+  print();
 }
