@@ -103,7 +103,7 @@ export function renderDocument(s, agreement, issuedAt) {
     </ol>
 
     <h2>同意</h2>
-    <p class="small">上記の内容および規約に同意します。(同意方法:${agreement ? '☑専用ページ □署名 □メール □DM' : '□署名 □メール □DM □専用ページ'})</p>
+    <p class="small">上記の内容および規約に同意します。</p>
     <div class="sign">
       <div><div class="sign-label">発注者 署名</div><div class="sign-line">${agreement ? esc(agreement.name) : ''}</div>
         <div class="sign-label">日付</div><div class="sign-line">${agreement ? esc(jpDate(agreement.at)) : ''}</div></div>
