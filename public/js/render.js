@@ -46,6 +46,7 @@ export function renderDocument(s, agreement, issuedAt) {
       <div class="party-name">${esc(name) || '&nbsp;'}</div>
       ${lines.filter(Boolean).map((l) => `<div class="party-line">${esc(l)}</div>`).join('')}</div>`;
   const taxLabel = s.tax.mode === 'inclusive' ? `消費税(内税 ${s.tax.rate}%)` : `消費税(${s.tax.rate}%)`;
+  const basis = s.tax.mode === 'inclusive' ? '税込' : '税抜';
   const netLabel = s.tax.mode === 'inclusive' ? '税抜金額' : '小計(税抜)';
   const whLabel = s.withholding
     ? `源泉徴収税額(${s.withholding.rate == null ? '10.21%/20.42%' : s.withholding.rate + '%'})` : '';
@@ -81,7 +82,7 @@ export function renderDocument(s, agreement, issuedAt) {
 
     <h2>報酬</h2>
     <table class="items">
-      <thead><tr><th>品目</th><th class="num">数量</th><th class="num">単価</th><th class="num">金額</th></tr></thead>
+      <thead><tr><th>品目</th><th class="num">数量</th><th class="num">単価(${basis})</th><th class="num">金額(${basis})</th></tr></thead>
       <tbody>${t.lines.map((l) => `<tr><td>${esc(l.name)}</td><td class="num">${l.qty}</td><td class="num">${yen(l.unit)}</td><td class="num">${yen(l.amount)}</td></tr>`).join('')}</tbody>
     </table>
     <table class="totals">
