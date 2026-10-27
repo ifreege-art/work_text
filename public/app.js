@@ -172,7 +172,7 @@ function orderForm() {
     ${w.enabled ? `<div class="grid2">${S(o, '税率', 'withholding.mode', [['auto', '10.21%(100万円超は超過分20.42%)'], ['custom', '任意の税率']])}
       ${w.mode === 'custom' ? F(o, '税率(%)', 'withholding.rate', { type: 'number', num: true }) : ''}</div>` : ''}
     <div style="margin-top:8px">${S(o, '支払い時期', 'payment.timing', PAYMENT_TIMINGS)}</div>
-    <div class="grid2">${F(o, '支払い方法', 'payment.method', { rows: 2, ph: '振込先・PayPay・PayPalなど' })}${F(o, '支払い期日', 'payment.due', { ph: '例:ラフ承認後3日以内' })}</div>
+    <div class="grid2">${F(o, '振込先・支払い方法', 'payment.method', { rows: 3, ph: '振込先・PayPay・PayPalなど' })}${F(o, '支払い期日', 'payment.due', { ph: '例:ラフ承認後3日以内' })}</div>
     <p id="totalLine" class="small muted"></p>
   </div>
   <div class="card"><h3>規約・特約</h3>
@@ -305,6 +305,8 @@ function viewMaster(tab) {
       ${F(master, '名前・屋号', 'profile.name')}
       <div class="grid2">${F(master, 'メールアドレス', 'profile.email')}${F(master, 'SNS・連絡先', 'profile.sns', { ph: '例:X @example' })}</div>
       <div class="grid2">${F(master, '電話番号', 'profile.phone')}${F(master, '住所', 'profile.address')}</div>
+      ${F(master, '振込先・支払い方法', 'profile.defaultPayment', { rows: 3, ph: '例:○○銀行 △△支店 普通 1234567 ヤマダ タロウ\nPayPay ID など' })}
+      <p class="small muted">新規の発注書に自動で入ります(発注書ごとに変更できます)。書類と同意ページに表示されるため、公開したくない場合は発注書側で空にしてください。</p>
       <p class="small muted">書類に表示しない項目(発行時に除外され、同意ページにも出ません)</p>
       <div class="row">${[['email', 'メール'], ['sns', 'SNS'], ['phone', '電話'], ['address', '住所']].map(([k, t]) =>
         `<label class="check"><input type="checkbox" data-set="profile.hide" data-val="${k}" ${p.hide.includes(k) ? 'checked' : ''}> ${t}を伏せる</label>`).join('')}</div></div>`,
@@ -325,7 +327,7 @@ function viewMaster(tab) {
       ${F(master, '消費税率(%)', 'profile.tax.rate', { type: 'number', num: true })}${S(master, '端数処理', 'profile.tax.rounding', [['floor', '切り捨て'], ['round', '四捨五入'], ['ceil', '切り上げ']])}</div>
       ${C(master, '源泉徴収を既定でオンにする', 'profile.withholding.enabled')}
       <div class="grid2">${S(master, '源泉徴収の税率', 'profile.withholding.mode', [['auto', '10.21%(100万円超は超過分20.42%)'], ['custom', '任意の税率']])}${F(master, '任意税率(%)', 'profile.withholding.rate', { type: 'number', num: true })}</div>
-      ${F(master, '支払い方法の既定値', 'profile.defaultPayment', { rows: 2 })}${F(master, '発注番号の接頭辞', 'profile.numberPrefix')}</div>
+      ${F(master, '発注番号の接頭辞', 'profile.numberPrefix')}</div>
       <div class="card"><h3>バックアップ</h3><button id="export">全データをJSONで書き出す</button></div>`,
   }[tab]();
   main.innerHTML = `<h2 class="page">マスタ</h2>

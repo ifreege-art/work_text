@@ -92,7 +92,7 @@ export function renderDocument(s, agreement, issuedAt) {
       <tr class="strong"><th>お支払い金額</th><td>${yen(t.payable)}</td></tr>` : ''}
     </table>
     <table class="kv">
-      ${row('支払い時期', s.payment.timing)}${row('支払い期日', s.payment.due)}${row('支払い方法', s.payment.method)}
+      ${row('支払い時期', s.payment.timing)}${row('支払い期日', s.payment.due)}${row('振込先・支払い方法', s.payment.method)}
     </table>
     ${s.notes ? `<h2>備考</h2><p class="free">${nl(s.notes)}</p>` : ''}
     ${s.special ? `<h2>特約事項</h2><p class="free">${nl(s.special)}</p>` : ''}
