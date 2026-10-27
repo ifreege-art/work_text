@@ -45,9 +45,7 @@ export function renderDocument(s, agreement, issuedAt) {
     <div class="party"><div class="party-label">${label}</div>
       <div class="party-name">${esc(name) || '&nbsp;'}</div>
       ${lines.filter(Boolean).map((l) => `<div class="party-line">${esc(l)}</div>`).join('')}</div>`;
-  const taxLabel = s.tax.mode === 'inclusive' ? `消費税(内税 ${s.tax.rate}%)` : `消費税(${s.tax.rate}%)`;
   const basis = s.tax.mode === 'inclusive' ? '税込' : '税抜';
-  const netLabel = s.tax.mode === 'inclusive' ? '税抜金額' : '小計(税抜)';
   const whLabel = s.withholding
     ? `源泉徴収税額(${s.withholding.rate == null ? '10.21%/20.42%' : s.withholding.rate + '%'})` : '';
   return `
@@ -86,9 +84,13 @@ export function renderDocument(s, agreement, issuedAt) {
       <tbody>${t.lines.map((l) => `<tr><td>${esc(l.name)}</td><td class="num">${l.qty}</td><td class="num">${yen(l.unit)}</td><td class="num">${yen(l.amount)}</td></tr>`).join('')}</tbody>
     </table>
     <table class="totals">
-      <tr><th>${netLabel}</th><td>${yen(t.net)}</td></tr>
-      <tr><th>${taxLabel}</th><td>${yen(t.tax)}</td></tr>
+      ${s.tax.mode === 'inclusive' ? `
       <tr class="strong"><th>合計(税込)</th><td>${yen(t.gross)}</td></tr>
+      <tr><th>うち消費税(${s.tax.rate}%)</th><td>${yen(t.tax)}</td></tr>
+      <tr><th>税抜金額</th><td>${yen(t.net)}</td></tr>` : `
+      <tr><th>小計(税抜)</th><td>${yen(t.net)}</td></tr>
+      <tr><th>消費税(${s.tax.rate}%)</th><td>${yen(t.tax)}</td></tr>
+      <tr class="strong"><th>合計(税込)</th><td>${yen(t.gross)}</td></tr>`}
       ${s.withholding ? `<tr><th>${whLabel}</th><td>−${yen(t.withholding)}</td></tr>
       <tr class="strong"><th>お支払い金額</th><td>${yen(t.payable)}</td></tr>` : ''}
     </table>
