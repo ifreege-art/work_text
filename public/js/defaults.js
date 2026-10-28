@@ -53,10 +53,12 @@ export const DEFAULT_MASTER = () => ({
     defaultPayment: '', numberPrefix: 'ORD',
     tax: { mode: 'exclusive', rate: 10, rounding: 'floor' },
     withholding: { enabled: false, mode: 'auto', rate: 10.21 },
+    invoice: { enabled: false, number: '', prefix: 'INV' },
   },
   artists: [],
   terms: DEFAULT_TERMS,
   counter: 0,
+  invoiceCounter: 0,
 });
 
 export const COPYRIGHT_OPTIONS = [

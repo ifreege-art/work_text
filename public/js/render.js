@@ -1,8 +1,8 @@
 import { calc, yen } from './core.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const nl = (s) => esc(s).replace(/\n/g, '<br>');
-const fmtDate = (d) => (d ? d.replace(/^(\d{4})-(\d{2})-(\d{2})$/, (_, y, m, dd) => `${y}年${+m}月${+dd}日`) : '');
+export const nl = (s) => esc(s).replace(/\n/g, '<br>');
+export const fmtDate = (d) => (d ? d.replace(/^(\d{4})-(\d{2})-(\d{2})$/, (_, y, m, dd) => `${y}年${+m}月${+dd}日`) : '');
 
 // 発行時点の内容を固定した、書類の元データ。非表示指定の項目はここで落とす。
 export function buildSnapshot(order, master) {
@@ -26,7 +26,7 @@ export function buildSnapshot(order, master) {
     client: { name: client.name, contact: client.contact, honorific: client.honorific ?? '様' },
     spec: order.spec, description: order.description, references: order.references,
     totals: t,
-    tax: { mode: order.tax.mode, rate: Number(order.tax.rate) || 0 },
+    tax: { mode: order.tax.mode, rate: Number(order.tax.rate) || 0, rounding: order.tax.rounding },
     withholding: order.withholding.enabled
       ? { rate: order.withholding.mode === 'custom' ? Number(order.withholding.rate) || 0 : null }
       : null,
@@ -35,19 +35,37 @@ export function buildSnapshot(order, master) {
   };
 }
 
-const jpDate = (iso) => new Date(iso).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', day: 'numeric' });
-const row = (k, v) => (v ? `<tr><th>${esc(k)}</th><td>${nl(v)}</td></tr>` : '');
+export const jpDate = (iso) => new Date(iso).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', day: 'numeric' });
+export const row = (k, v) => (v ? `<tr><th>${esc(k)}</th><td>${nl(v)}</td></tr>` : '');
+
+export const party = (label, name, lines) => `
+  <div class="party"><div class="party-label">${label}</div>
+    <div class="party-name">${esc(name) || '&nbsp;'}</div>
+    ${lines.filter(Boolean).map((l) => `<div class="party-line">${esc(l)}</div>`).join('')}</div>`;
+
+export const itemsTable = (lines, basis) => `
+  <table class="items">
+    <thead><tr><th>品目</th><th class="num">数量</th><th class="num">単価(${basis})</th><th class="num">金額(${basis})</th></tr></thead>
+    <tbody>${lines.map((l) => `<tr><td>${esc(l.name)}</td><td class="num">${l.qty}</td><td class="num">${yen(l.unit)}</td><td class="num">${yen(l.amount)}</td></tr>`).join('')}</tbody>
+  </table>`;
+
+export const totalsTable = (tax, t, wh) => `
+  <table class="totals">
+    ${tax.mode === 'inclusive' ? `
+    <tr class="strong"><th>合計(税込)</th><td>${yen(t.gross)}</td></tr>
+    <tr><th>うち消費税(${tax.rate}%)</th><td>${yen(t.tax)}</td></tr>
+    <tr><th>税抜金額</th><td>${yen(t.net)}</td></tr>` : `
+    <tr><th>小計(税抜)</th><td>${yen(t.net)}</td></tr>
+    <tr><th>消費税(${tax.rate}%)</th><td>${yen(t.tax)}</td></tr>
+    <tr class="strong"><th>合計(税込)</th><td>${yen(t.gross)}</td></tr>`}
+    ${wh ? `<tr><th>源泉徴収税額(${wh.rate == null ? '10.21%/20.42%' : wh.rate + '%'})</th><td>−${yen(t.withholding)}</td></tr>
+    <tr class="strong"><th>お支払い金額</th><td>${yen(t.payable)}</td></tr>` : ''}
+  </table>`;
 
 export function renderDocument(s, agreement, issuedAt) {
   if (s.v !== 2) return '<p class="notice">旧形式の書類のため表示できません。</p>';
   const cr = s.creator, cl = s.client, sp = s.spec, t = s.totals;
-  const party = (label, name, lines) => `
-    <div class="party"><div class="party-label">${label}</div>
-      <div class="party-name">${esc(name) || '&nbsp;'}</div>
-      ${lines.filter(Boolean).map((l) => `<div class="party-line">${esc(l)}</div>`).join('')}</div>`;
   const basis = s.tax.mode === 'inclusive' ? '税込' : '税抜';
-  const whLabel = s.withholding
-    ? `源泉徴収税額(${s.withholding.rate == null ? '10.21%/20.42%' : s.withholding.rate + '%'})` : '';
   return `
   <article class="doc">
     <header class="doc-head">
@@ -79,21 +97,8 @@ export function renderDocument(s, agreement, issuedAt) {
     </table>
 
     <h2>報酬</h2>
-    <table class="items">
-      <thead><tr><th>品目</th><th class="num">数量</th><th class="num">単価(${basis})</th><th class="num">金額(${basis})</th></tr></thead>
-      <tbody>${t.lines.map((l) => `<tr><td>${esc(l.name)}</td><td class="num">${l.qty}</td><td class="num">${yen(l.unit)}</td><td class="num">${yen(l.amount)}</td></tr>`).join('')}</tbody>
-    </table>
-    <table class="totals">
-      ${s.tax.mode === 'inclusive' ? `
-      <tr class="strong"><th>合計(税込)</th><td>${yen(t.gross)}</td></tr>
-      <tr><th>うち消費税(${s.tax.rate}%)</th><td>${yen(t.tax)}</td></tr>
-      <tr><th>税抜金額</th><td>${yen(t.net)}</td></tr>` : `
-      <tr><th>小計(税抜)</th><td>${yen(t.net)}</td></tr>
-      <tr><th>消費税(${s.tax.rate}%)</th><td>${yen(t.tax)}</td></tr>
-      <tr class="strong"><th>合計(税込)</th><td>${yen(t.gross)}</td></tr>`}
-      ${s.withholding ? `<tr><th>${whLabel}</th><td>−${yen(t.withholding)}</td></tr>
-      <tr class="strong"><th>お支払い金額</th><td>${yen(t.payable)}</td></tr>` : ''}
-    </table>
+    ${itemsTable(t.lines, basis)}
+    ${totalsTable(s.tax, t, s.withholding)}
     <table class="kv">
       ${row('支払い時期', s.payment.timing)}${row('支払い期日', s.payment.due)}${row('振込先・支払い方法', s.payment.method)}
     </table>

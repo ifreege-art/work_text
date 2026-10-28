@@ -37,6 +37,12 @@ assert.equal(pub.data.agreement, null);
 assert.equal(pub.data.order, undefined);
 assert.equal((await call('GET', '/api/public/nope', null, false)).status, 404);
 
+// 発行後は請求書を保存でき、請求書があると発行を取り消せない
+const inv = [{ id: 'i1', number: 'INV-1' }];
+assert.equal((await call('PUT', `/api/orders/${id}`, { order: { invoices: inv } })).data.order.invoices.length, 1);
+assert.equal((await call('POST', `/api/orders/${id}/unlock`, {})).status, 409);
+await call('PUT', `/api/orders/${id}`, { order: { invoices: [] } });
+
 // 発行後は内容を変更できず、支払い状況のみ更新できる
 const put = (await call('PUT', `/api/orders/${id}`, { order: { title: 'changed', paid: true, paidAt: '2026-01-01' } })).data.order;
 assert.equal(put.title, 'u'); assert.equal(put.paid, true);

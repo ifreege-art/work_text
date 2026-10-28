@@ -106,9 +106,10 @@ export default async (req) => {
         if (method === 'PUT') {
           const next = { ...cur };
           if (cur.issued) {
-            // 発行後は支払い状況のみ更新できる
+            // 発行後は支払い状況と請求書のみ更新できる
             next.paid = !!body.order.paid;
             next.paidAt = body.order.paidAt || '';
+            if (Array.isArray(body.order.invoices)) next.invoices = body.order.invoices;
           } else {
             Object.assign(next, body.order);
             for (const k of PROTECTED) next[k] = cur[k];
@@ -137,6 +138,7 @@ export default async (req) => {
       }
       if (c === 'unlock' && method === 'POST') {
         if (!cur.issued) return json({ order: cur });
+        if (cur.invoices?.length) return fail(409, '請求書があるため発行を取り消せません。先に請求書を削除してください');
         if (cur.agreement) cur.history = [...(cur.history || []), { issuedAt: cur.issued.at, hash: cur.issued.hash, agreement: cur.agreement }];
         await store('tokens').delete(cur.issued.token);
         delete cur.issued; delete cur.agreement;
